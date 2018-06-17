@@ -5,11 +5,14 @@ require "php-html-parser/vendor/autoload.php";
 
 use PHPHtmlParser\Dom;
 
-function arrayize($data){
+function arrayize($data,$utf8=false){
     $txt = html_entity_decode($data);
+    if($utf8){
+        $txt= utf8_decode($txt);
+    }
     $txt = str_replace('&#39;', "'", $txt);
     $txt = str_replace('&rsquo;', "'", $txt);
-
+    $txt = str_replace('&#8230;', "...", $txt);
     
     $array = str_split($txt, 512);
     echo "\n Scrap : ".sizeof($array)." parts";
@@ -81,7 +84,7 @@ function scum() {
     while(!$result){
         $rand = rand(0, count($tweets) - 1);
         if($tweets[$rand]){
-             $array = arrayize($tweets[$rand]->text);
+             $array = arrayize($tweets[$rand]->text,1);
              $result=true;
         }
     }

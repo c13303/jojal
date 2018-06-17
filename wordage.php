@@ -11,7 +11,6 @@ function wordme($text, $id_log) {
 
 
     $delim = ' \n\t,.!?:;';
-
     $tok = strtok($text, $delim);
 
     while ($tok !== false) {

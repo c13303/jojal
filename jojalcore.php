@@ -4,33 +4,30 @@
 
 require('jojal_twitter.php');
 
-$botnames = array('Jojal', 'Jojal2', 'Jojo');
+
+
+$botnames = array('Jojal', 'Jojal2', 'Jojo',$botname);
 
 
 
-
-$botname = 'Jojal';
-$room = '#communication_interne';
-$table = 'logs';
-$methode = 1;
-$intelligence = 250000;  // ORIGINAL METHOD WORD COUNT by CHARLES désolé ça reste la meilleure :'(
+//$methode = 1;$intelligence = 250000;  // ORIGINAL METHOD WORD COUNT by CHARLES désolé ça reste la meilleure :'(
 //$methode = 2; $intelligence = 100000;  // METHODE SIMILAR_TEXT
-$methode = 3;
-$intelligence = 350000;  // METHODE INDICE JACQUARD + SELE
+$methode = 3;$intelligence = 350000;  // METHODE INDICE JACQUARD + SELE
 
 
 
 /* fonction indice methode 3 */
 
-function getSimilarityCoefficient($mots, $string2) {
+function getSimilarityCoefficient($mots, $string2,$bofmots =null) {
     $minWordSize = 3;
     $item1 = $mots;
     $item2 = array();
     $delim = ' \n\t,.!?:;';
     $tok = strtok($string2, $delim);
     while ($tok !== false) {
-        if (strlen($tok) > $minWordSize)
+        if (strlen($tok) > $minWordSize && !in_array($tok,$bofmots)){
             $item2[] = $tok;
+        }
         $tok = strtok($delim);
     }
     $arr_intersection = array_intersect($item1, $item2);
@@ -39,10 +36,25 @@ function getSimilarityCoefficient($mots, $string2) {
     return $coefficient;
 }
 
-if ($devmode) {
-    $botname = 'Jojal2';
-    $room = '#jojaltest';
-    $table = 'logs';
+
+function cleanageToSpeak($say, $qui, $botnames,$pipol,$users) {
+    foreach ($botnames as $botna) {
+        $say = str_replace($botna, $qui, $say);
+        $say = str_replace(strtolower($botna), $qui, $say);
+    }
+    foreach ($pipol as $pip) {
+        if (strlen($pip) > 3) {
+            if (in_array($pip, $users))
+                $say = str_replace($pip, $qui, $say);
+            else
+                $say = str_replace($pip, '', $say);
+        }
+    }
+    $adress = rand(1, 3);
+    if ($adress == 1)
+        $say = $qui . ' : ' . $say;
+    $say = preg_replace('/\s{2,}/', ' ', $say);
+    return($say);
 }
 
 ini_set(default_charset, "ISO-8859-1");
@@ -142,13 +154,12 @@ while (1) {
             continue;
         }
         $c++;
-        echo PHP_EOL . '[data]' . $data . '';
+        echo PHP_EOL . '' . $data . '';
 
         // Separate all data
         $ex = explode(' ', $data);
 
         if ($ex[1] == '353') {
-
             $dec = explode(':', $data);
             $room_users = $dec[2];
             $users = explode(' ', $room_users);
@@ -159,60 +170,58 @@ while (1) {
 
         // Send PONG back to the server
         if ($ex[0] == "PING") {
-
             $count = chope('SELECT count(iid) AS c FROM `logs` WHERE 1');
             $count = $count['c'];
-
-
             fputs($socket, "PONG " . $ex[1] . "\n");
             $chance = rand($min_normal, $max_normal);
             $totalchance = rand($min_normal, $max_normal);
-            echo PHP_EOL . 'New Ping > New Chance : ' . $chance;
+            // echo PHP_EOL . 'New Ping > New Chance : ' . $chance;
             fputs($socket, "JOIN " . $room . "\n");
             $de = rand(0, 999);
+             if ($de > 985 && $de <= 990) {
+                $randoms = scum();
+                fputs($socket, "PRIVMSG " . $room . " :$randoms\n");
+            }
             if ($de > 990 && $de < 995) {
-
                 $randoms = chope('SELECT say FROM ' . $table . ' ORDER BY rand() LIMIT 0,1');
                 $randoms = $randoms['say'];
                 fputs($socket, "PRIVMSG " . $room . " :$randoms\n");
             }
             if ($de >= 995) {
-
                 $randoms = tweet();
                 foreach ($randoms as $txt) {
                     fputs($socket, "PRIVMSG " . $room . " :$txt\n");
                 }
             }
         }
-        if ($ex[1] == 'JOIN') {
-            //fputs($socket,"PRIVMSG ".$room." :\x03".rand(0,15).",".rand(0,15)."salur \x03\n");
-
-            $de = rand(0, 999);
-            if ($de > 800) {
-                fputs($socket, "PRIVMSG " . $room . " :salut\n");
-            }
-
-
+        
+        if ($ex[1] == 'JOIN') {           
 
             $newuser = explode('!', $ex[0]);
             $newuser = str_replace(':', '', $newuser[0]);
             echo PHP_EOL . 'NEW USER : ' . $newuser;
             $users[] = $newuser;
             $users = list_users($users);
-
-            // add user to list
+            
+             $de = rand(0, 999);
+            if ($de > 800) {
+                fputs($socket, "PRIVMSG " . $room . " :salut $newuser\n");
+            }
         }
 
         if ($ex[1] == 'PART' || $ex[1] == 'QUIT') {
 
-
             $newuser = explode('!', $ex[0]);
             $newuser = str_replace(':', '', $newuser[0]);
             echo PHP_EOL . 'GONE USER : ' . $newuser;
+            $de = rand(0, 999);
+            if ($de > 800) {
+                fputs($socket, "PRIVMSG " . $room . " :ouf\n");
+            }
             if (($key = array_search($newuser, $users)) !== false) {
                 unset($users[$key]);
             }
-            $users = list_users($users);
+            $users = list_users($users);          
 
             // add user to list
         }
@@ -233,18 +242,11 @@ while (1) {
 
 
         if ($ex[1] == "PRIVMSG") { /// IF SAY RECEPTION DU MESSAGE
-            $ex[0] = substr($ex[0], 1);
-            echo PHP_EOL . "Pv from: '" . $ex[0] . "\n";
+            $ex[0] = substr($ex[0], 1); // speaker
             $pouet = explode('!', $ex[0]);
             $data = str_replace($ex[0], $pouet[0], $data);
             $dit = explode(':', $data);
-            /*
-              if (strstr($dit[2], 'conjojo')) {
-              mysql_close();
-              echo "***disconnected***\n";
-              }
-             * 
-             */
+
             echo PHP_EOL . "--- NEW ---------------------------------" . PHP_EOL . "Chance : $chance\n";
             /// REPLY
             $lastscore = 0;
@@ -279,24 +281,20 @@ while (1) {
 
 
             $nb_mots = count($mots);
-            // echo PHP_EOL."ICI c'est $ex[0] ex1: $ex[1] ex2: $ex[2]\n";
             $qui = explode('!', $ex[0]);
             $qui = $qui[0];
-            //  echo PHP_EOL . "Interlocuteur : $qui";
+            
             /// public or private
             if ($ex[2] == $botname) {
                 $privatemode = 1;
-                //  echo PHP_EOL . "Private mode ! En priv� avec $qui";
                 $response = $qui;
             } else {
                 $privatemode = 0;
                 $response = $room;
             }
+            
             $dey = '';
-            echo PHP_EOL . "$qui: $dit[2] ($nb_mots mots)";
-
-
-
+            echo PHP_EOL . "$qui($privatemode): $dit[2] ($nb_mots mots)";
 
             /* triggers */
 
@@ -429,14 +427,11 @@ while (1) {
                 // echo "[dey=$dey / $chance]";
             }
 
-
-
             /* calculate intelligence bordel ! */
             $randStart = 0;
 
             if ($dey == 1 && !$nodey && !$shutup) {
                 // PARLER : TROUVER LA REPLIQUE CINGLANTE
-
 
                 /* cools words */
                 $coolwords = array();
@@ -453,16 +448,12 @@ while (1) {
                     }//end key
                 }
 
-
                 foreach ($coolwords as $wordsaid) {
                     $q = 'SELECT iid,say,lastiid FROM ' . $table . ' WHERE say LIKE "%' . $wordsaid . '%" ORDER BY rand() LIMIT ' . $randStart . ',' . $intelligence;
-
                     $existe = requete($q);
                     while ($exist = mysql_fetch_assoc($existe)) {
-
                         if (!isset($tab[$exist['iid']]))
                             $tab[$exist['iid']] = 0;
-
                         if ($methode == 1) {
                             $tab[$exist['iid']] ++;
                         }
@@ -471,24 +462,15 @@ while (1) {
                             $tab[$exist['iid']] += $percent;
                         }
                         if ($methode == 3) {
-                            $percent = getSimilarityCoefficient($mots, $exist['say'], "");
+                            $percent = getSimilarityCoefficient($mots, $exist['say'], $bofmots);
                             $tab[$exist['iid']] += $percent;
                         }
-
                         $tosay[$exist['iid']] = $exist['lastiid'];
                         $phrastest[$exist['iid']] = $exist['say'];
                         if ($tab[$exist['iid']] > 2) /// si le score est suffisant
                             break(1);
                     }
                 }
-
-
-
-
-
-
-
-
 
 
 
@@ -501,10 +483,10 @@ while (1) {
                     }
                 }
                 if ($best)
-                    echo PHP_EOL . 'Meilleure Correspondance : ' . $lastscore . ': [lastiid:' . $best . '] "' . $phrabest . '';
+                    echo PHP_EOL . 'Best Match : ' . $lastscore . ': "' . $phrabest . '';
                 else
-                    echo PHP_EOL . "Pas de correspondance\n";
-
+                    echo PHP_EOL . "No Match\n";
+                
 
 
                 if (!isset($alreadysaid))
@@ -531,7 +513,7 @@ while (1) {
                     $replica++;
 
                     if ($replica > 300) {
-                        echo "{RESETING}\n";
+                        echo PHP_EOL."{RESETING}";
                         $alreadysaid = array();
                         $replica = 0;
                         // fputs($socket, "PRIVMSG " . $room . " : Faites votre devoir de citoyen et votez : http://ouiounon.golmon.fr \n");
@@ -545,27 +527,10 @@ while (1) {
                                 $what['say'] = $reponse_b;
                             }
 
-                            $what['say'] = str_replace('jojo', $qui, $what['say']);
-                            $what['say'] = str_replace($botname, $qui, $what['say']);
-                            $what['say'] = str_replace(strtolower($botname), $qui, $what['say']);
-                            foreach ($botnames as $botna) {
-                                $what['say'] = str_replace($botna, $qui, $what['say']);
-                                $what['say'] = str_replace(strtolower($botna), $qui, $what['say']);
-                            }
+                            
+                           $what['say']=cleanageToSpeak($what['say'],$qui,$botnames,$pipol,$users);
 
 
-                            foreach ($pipol as $pip) {
-                                if (strlen($pip) > 3) {
-                                    if (in_array($pip, $users))
-                                        $what['say'] = str_replace($pip, $qui, $what['say']);
-                                    else
-                                        $what['say'] = str_replace($pip, '', $what['say']);
-                                }
-                            }
-                            $adress = rand(1, 3);
-                            if ($adress == 1)
-                                $what['say'] = $qui . ' : ' . $what['say'];
-                            $what['say'] = preg_replace('/\s{2,}/', ' ', $what['say']);
                             if (!strstr($what['say'], 'http')) {
                                 fputs($socket, "PRIVMSG " . $response . " :" . $what['say'] . "\n");
                             }
@@ -573,12 +538,12 @@ while (1) {
                         }
                         $alreadysaid[] = $best;
                     } else {
-                        echo "no said (?)\n";
+                        echo PHP_EOL."error, nothing to say (?)";
                     }
                 }
             } // no dey
             else {
-                echo PHP_EOL . "- Shut - \n";
+                echo PHP_EOL . "- Shut - ";
             }
 
             // Insertion de la replique dans la BDD

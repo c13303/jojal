@@ -64,9 +64,12 @@ $server = "chat.freenode.net";
 date_default_timezone_set('Europe/Brussels');
 
 $chance = 0;
+/*
 $scumming = array();
 $scumbuffer = array();
 $scumtopic = array();
+ * 
+ */
 $caca = array();
 require('bofmots.php');
 $chrono = array();
@@ -81,7 +84,7 @@ $original_chance = 0;
 $said = '';
 $table_lastid = array();
 
-
+$qui = $botname;
 
 require('jojal_sql.php');
 
@@ -108,7 +111,7 @@ while (1) {
     fputs($socket, "USER $botname tarteflure.com CM :CM bot\n");
     fputs($socket, "NICK $botname\n");
     fputs($socket, "JOIN " . $room . "\n");
-    //  fputs($socket, "PRIVMSG " . $room . " :/mode $botname -R \n");
+    fputs($socket, "MODE " . $botname . " -R \n");
     /*
      *
      * SELECTION GENS PRESENTS
@@ -177,18 +180,22 @@ while (1) {
             $totalchance = rand($min_normal, $max_normal);
             // echo PHP_EOL . 'New Ping > New Chance : ' . $chance;
             fputs($socket, "JOIN " . $room . "\n");
-            $de = rand(0, 999);
-             if ($de > 985 && $de <= 990) {
+           
+            /*
+            if (rand(0, $maxrandomrange) < $scumchance) {
                 $randoms = scum();
-                fputs($socket, "PRIVMSG " . $room . " :$randoms\n");
-            }
-            if ($de > 990 && $de < 995) {
+                foreach ($randoms as $txt) {
+                    fputs($socket, "PRIVMSG " . $room . " :$txt\n");
+                }
+            }*/
+             if (rand(0, $maxrandomrange) < $randchance) {
                 $randoms = chope('SELECT say FROM ' . $table . ' ORDER BY rand() LIMIT 0,1');
-                $randoms = $randoms['say'];
-                fputs($socket, "PRIVMSG " . $room . " :$randoms\n");
+                $txt = $randoms['say'];
+                fputs($socket, "PRIVMSG " . $room . " :$txt\n");
+                
             }
-            if ($de >= 995) {
-                $randoms = tweet();
+            if (rand(0, $maxrandomrange) < $tweetchance ) {
+                $randoms = tweet($users,$qui);
                 foreach ($randoms as $txt) {
                     fputs($socket, "PRIVMSG " . $room . " :$txt\n");
                 }
@@ -203,8 +210,8 @@ while (1) {
             $users[] = $newuser;
             $users = list_users($users);
             
-             $de = rand(0, 999);
-            if ($de > 800) {
+             $de = rand(0, $maxrandomrange);
+            if ($de > $hellochance && !in_array($newuser, $botnames)) {
                 fputs($socket, "PRIVMSG " . $room . " :salut $newuser\n");
             }
         }
@@ -214,8 +221,8 @@ while (1) {
             $newuser = explode('!', $ex[0]);
             $newuser = str_replace(':', '', $newuser[0]);
             echo PHP_EOL . 'GONE USER : ' . $newuser;
-            $de = rand(0, 999);
-            if ($de > 800) {
+            $de = rand(0, $maxrandomrange);
+            if ($de > $hellochance) {
                 fputs($socket, "PRIVMSG " . $room . " :ouf\n");
             }
             if (($key = array_search($newuser, $users)) !== false) {
@@ -305,12 +312,12 @@ while (1) {
 
             $jour = date('Y-m-d');
             if (strstr($dit[2], 'tweet')) {
-                $randoms = tweet();
+                $randoms = tweet($users,$qui);
                 foreach ($randoms as $txt) {
                     fputs($socket, "PRIVMSG " . $room . " :$txt\n");
                 }
             }
-
+/*
             if (strstr($dit[2], 'scum')) {
                 $randoms = scum();
                 foreach ($randoms as $txt) {
@@ -318,7 +325,7 @@ while (1) {
                     fputs($socket, "PRIVMSG " . $room . " :$txt\n");
                 }
             }
-
+*/
             if (strstr($dit[2], '!help')) {
 
                 fputs($socket, "PRIVMSG " . $qui . " : (en pv) #ano [message anonyme] \n");
@@ -357,6 +364,57 @@ while (1) {
                 $shutup = 1;
                 echo "\n$h $m\n";
             }
+            
+            if (strstr($dit[2], 'qui a deja dit ') || strstr($dit[2], 'qui a déjà dit ')) {
+                $shutup = 1;
+                $string = $dit[2];
+                $string = str_replace('?','',$string);
+                $string = str_replace('"','',$string);
+                $string = str_replace('é','e',$string);
+                $string = str_replace('à','a',$string);
+                $string = explode('qui a deja dit ',$string);
+                $string = $string[1];
+               
+                $str = trim($string);
+                
+                $q = 'SELECT nick,count(iid) AS con FROM logs WHERE say LIKE "%'.$str.'%" GROUP BY nick ORDER BY con DESC LIMIT 0,3';
+               
+                $existe = requete($q);
+                $rep = '';
+                while ($e = mysql_fetch_assoc($existe)) {
+                    $rep .= $rep ? ', ' : '';
+                    $rep .=$e['nick'].' x '.$e['con'];
+                }
+                if(!$rep){
+                    $rep = "Personne n'a jamais dit ça ...";           
+                }
+                fputs($socket, "PRIVMSG " . $response . " : " . $qui . ": " . $rep . " \n");
+            }
+            
+             if (strstr($dit[2], 'que dirait ')) {
+                 $shutup = 1;
+                $string = $dit[2];
+                $string = str_replace('?','',$string);
+                $string = str_replace('"','',$string);
+                $string = explode('que dirait ',$string);
+                $string = explode(' ',$string[1],2);
+                $speaker = trim($string[0]);
+                $reste = explode('de ',$string[1]);
+                $what = trim($reste[1]);
+                $sql = 'SELECT say FROM logs WHERE nick="'.$speaker.'" AND say LIKE "%'.$what.'%" ORDER BY rand() LIMIT 0,1';
+              //  echo PHP_EOL."$string[1] $reste[0] Compte : ".$sql;
+                $rep = chope($sql);
+                if(!$rep){
+                    $citation = "Il n'en dirait rien ...";
+                } else {
+                    $citation = "\"".trim($rep['say'])."\" ($speaker)"; 
+                }
+                 fputs($socket, "PRIVMSG " . $response . " : " . $qui . ": " . $citation . " \n");
+               
+             }
+            
+            
+            
 
             /* POTE QUI FEATURE */
 
@@ -492,31 +550,33 @@ while (1) {
                 if (!isset($alreadysaid))
                     $alreadysaid = array();
                 if ($best && !in_array($best, $alreadysaid)) {
+                    
                     $ignore = array('McCaca');
                     $ig_req = '';
+                    $reponse_b = '';
+                    
                     foreach ($ignore as $ignoble) {
                         $ig_req .= ' AND nick!="' . $ignoble . '" ';
                     }
                     /* selection du parent de la réponse, en tant que meilleure réponse  */
                     $what = chope('SELECT iid,say FROM ' . $table . ' WHERE lastiid=' . $best . ' ' . $ig_req . ' LIMIT 0,1;');
                     $answer = $what['say'];
-                    if (!$answer) {
+                    if (!$answer && $phrabest != $dit[2]) {
                         echo PHP_EOL . "No parent, taking original copy";
-                        $answer = $phrabest;
+                        $reponse_b = $phrabest;
                     }
-                    echo PHP_EOL . "REPONSE : << $answer >>";
-                    $reponse_b = '';
+                    echo PHP_EOL . "Answer : << $answer >>";
+                    
 
                     if (in_array($best, $alreadysaid))
-                        echo PHP_EOL . '-----deja tire';
+                        echo PHP_EOL . '-----abort : already said----';
 
                     $replica++;
 
                     if ($replica > 300) {
                         echo PHP_EOL."{RESETING}";
                         $alreadysaid = array();
-                        $replica = 0;
-                        // fputs($socket, "PRIVMSG " . $room . " : Faites votre devoir de citoyen et votez : http://ouiounon.golmon.fr \n");
+                        $replica = 0;                       
                     }
 
 
@@ -526,10 +586,8 @@ while (1) {
                             if ($reponse_b) {
                                 $what['say'] = $reponse_b;
                             }
-
                             
                            $what['say']=cleanageToSpeak($what['say'],$qui,$botnames,$pipol,$users);
-
 
                             if (!strstr($what['say'], 'http')) {
                                 fputs($socket, "PRIVMSG " . $response . " :" . $what['say'] . "\n");
@@ -561,17 +619,19 @@ while (1) {
 
             $dit[2] = strtolower($dit[2]);
             $exist = chope('SELECT * FROM ' . $table . ' WHERE say="' . $dit[2] . '" LIMIT 0,1'); // verification pas dej� entree
-            $replique_parent = chope("SELECT * FROM $table WHERE iid=$lastid LIMIT 0,1"); // verification la replique parent
-            $replica = $replique_parent['say'];
-
+            
             if ($dit[2] != $exist['say']) {
-
-                // en $private avec $qui
-                //  echo PHP_EOL . "SQL INSERT > $dit[2]";
-                //  if ($replica)  echo PHP_EOL . "PARENT > $replica";
-                if (!strstr($dit[2], 'http'))
+                if (!strstr($dit[2], 'http')){
                     requete('INSERT INTO ' . $table . '(nick,say,lastiid,private) VALUES("' . $qui . '","' . $dit[2] . '",' . $lastid . ',' . $privatemode . ');');
-                $lastid = mysql_insert_id();
+                }
+                $justid = mysql_insert_id();
+                
+                //requete('INSERT INTO logrelation(lid,pid) VALUES('.$justid.','.$lastid.')');
+
+                $lastid = $justid;
+                
+                
+
 
                 // stockage lastidd selon la discussion
                 if ($privatemode == 0)

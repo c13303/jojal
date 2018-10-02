@@ -5,61 +5,107 @@ require "php-html-parser/vendor/autoload.php";
 
 use PHPHtmlParser\Dom;
 
-function arrayize($data,$utf8=false){
+function arrayize($data, $utf8 = false, $pipol = null) {
+    //echo PHP_EOL.$data;
+    if(strstr($data,'pic.twitter')){
+        return(null);
+    }
+    
+    $npos = 0;
+    shuffle($pipol);
+    if ($pipol) {
+        $adom = new Dom;
+        $adom->load($data);
+        $links = $adom->find('a');
+
+        foreach ($links as $link) {
+
+            if ($npos > count($pipol) - 1) {
+                $areplacer = " ma bite ";
+            } else {
+                $areplacer = ' '.$pipol[$npos].' ';
+                $npos++;
+            }
+
+            //echo PHP_EOL." replace $link";
+            $data = str_replace($link, $areplacer, $data);
+            $data = str_replace('  ', ' ', $data);
+        }
+    }
+
+
+
+
     $txt = html_entity_decode($data);
-    if($utf8){
-        $txt= utf8_decode($txt);
+    if ($utf8) {
+        $txt = utf8_decode($txt);
     }
     $txt = str_replace('&#39;', "'", $txt);
     $txt = str_replace('&rsquo;', "'", $txt);
     $txt = str_replace('&#8230;', "...", $txt);
+
+    $txt = strip_tags($txt);
+    if(!$txt)return null;
     
     $array = str_split($txt, 512);
-    echo "\n Scrap : ".sizeof($array)." parts";
+    //  echo "\n Scrap : " . sizeof($array) . " parts";
+
+
+
     return($array);
 }
 
-
-function tweet() {
+function tweet($pipol, $qui) {
     $dom = new Dom;
+    $filename = '/usr/home/c13/jojal/twittersources.txt';
+    $revolte = file($filename, FILE_IGNORE_NEW_LINES);
+    // echo PHP_EOL . count($revolte) . ' sources';
 
 
-
-    $revolte = array(
-        'https://twitter.com/nadine__morano',
-        'https://twitter.com/laurentwauquiez',
-        'https://twitter.com/FrancoisFillon',
-        'https://twitter.com/NicolasSarkozy',
-        'https://twitter.com/MarleneSchiappa',
-    );
     $rand = rand(0, count($revolte) - 1);
+    $selected = $revolte[$rand];
 
-    $url = $revolte[$rand];
+    $twitass = explode(',', $selected);
+    $url = $twitass[0];
+    $people = $twitass[1];
+    if ($people == '$qui') {
+        $signe = $pipol[rand(0, count($pipol) - 1)];
+    } else {
+        $signe = $people;
+    }
+
 
     $page = file_get_contents($url);
 
+    if (!$page) {
+        echo PHP_EOL . "error url : " . $url . ' (' . $rand . ')';
+    }
     $dom->load($page);
     $tweets = $dom->find('.tweet-text');
 
+
+
     $rand = rand(0, count($tweets) - 1);
-    $array = arrayize($tweets[$rand]->text);
+    $array = arrayize($tweets[$rand], null, $pipol);
     
+    if(!$array)return null;
+    
+    $array[count($array) - 1] .= ' (' . $signe . ')';
+
     return($array);
 }
 
-
-
-
 function scum() {
-
+    return(null);
+    /*
     $dom = new Dom;
     $revolte = array(
-        'http://scum.5tfu.org/page/'.rand(1,27).'/',
+        'http://scum.5tfu.org/page/' . rand(1, 27) . '/',
     );
     $rand = rand(0, count($revolte) - 1);
 
     $url = $revolte[$rand];
-    echo PHP_EOL.'Scrapping URL : '.$url;
+    echo PHP_EOL . 'Scrapping URL : ' . $url;
     $ch = curl_init();
 
     // set url
@@ -77,23 +123,18 @@ function scum() {
 
     // close curl resource to free up system resources
     curl_close($ch);
-    
+
     $dom->load($output);
     $tweets = $dom->find('p');
     $result = false;
-    while(!$result){
+    while (!$result) {
         $rand = rand(0, count($tweets) - 1);
-        if($tweets[$rand]){
-             $array = arrayize($tweets[$rand]->text,1);
-             $result=true;
+        if ($tweets[$rand]) {
+            $array = arrayize($tweets[$rand]->text, 1);
+            $result = true;
         }
     }
-    
-    
-    
-   
-    
-    
-     return($array);
+    return($array);
+     * 
+     */
 }
-

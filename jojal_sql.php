@@ -61,3 +61,9 @@ function list_users($users) {
     }
     return($users);
 }
+
+function jlog($log){
+     $now = date('Y-m-d h:i');
+     $log = str_replace("\n","",$log);
+    echo PHP_EOL.$now." : $log";
+}

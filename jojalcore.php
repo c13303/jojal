@@ -4,19 +4,16 @@
 
 require('jojal_twitter.php');
 
-
-
 $botnames = array('Jojal', 'Jojal2', 'Jojo',$botname);
-
-
-
 //$methode = 1;$intelligence = 250000;  // ORIGINAL METHOD WORD COUNT by CHARLES désolé ça reste la meilleure :'(
 //$methode = 2; $intelligence = 100000;  // METHODE SIMILAR_TEXT
 $methode = 3;$intelligence = 350000;  // METHODE INDICE JACQUARD + SELE
-
-
+$maintenance = array();
 
 /* fonction indice methode 3 */
+
+
+
 
 function getSimilarityCoefficient($mots, $string2,$bofmots =null) {
     $minWordSize = 3;
@@ -106,7 +103,7 @@ $response = $room;
 // Force an endless while
 while (1) {
 
-
+    $now = date('Y-m-d h:i');
     $socket = fsockopen($server, 6667);
     fputs($socket, "USER $botname tarteflure.com CM :CM bot\n");
     fputs($socket, "NICK $botname\n");
@@ -136,6 +133,7 @@ while (1) {
     $c = 0;
     // Continue the rest of the script here
     while (1) {
+        
         $h = date('H');
         $m = date('i');
         $shutup = 0;
@@ -143,7 +141,7 @@ while (1) {
 
 
         if (!empty($delayshit[$h][$m])) {
-            echo 'Chrono';
+            jlog("Chrono Triggered $h $m");
             $renvoi = $delayshit[$h][$m];
             $delayshit[$h][$m] = null;
             fputs($socket, "PRIVMSG " . $room . " :$renvoi\n");
@@ -157,8 +155,11 @@ while (1) {
             continue;
         }
         $c++;
-        echo PHP_EOL . '' . $data . '';
-
+       
+        if(!strstr('PING :',$data)){
+            jlog('Data : '.$data);            
+        }
+        
         // Separate all data
         $ex = explode(' ', $data);
 
@@ -166,29 +167,43 @@ while (1) {
             $dec = explode(':', $data);
             $room_users = $dec[2];
             $users = explode(' ', $room_users);
-            echo PHP_EOL . 'LiStIng UsErS+-';
+            jlog('LiStIng UsErS+-');
             $users = list_users($users);
         }
+        
+        
 
 
         // Send PONG back to the server
         if ($ex[0] == "PING") {
+            
+            /* maintenance */
+            
+            $today = date('Y-m-d');
+            $now = date('Y-m-d h:i');
+            if (!isset($maintenance[$today])) {
+
+                jlog('---- MAINTENANCE ---');
+
+                requete('UPDATE logs SET nick="puduc" WHERE nick LIKE "charm%" OR nick LIKE "puduc%" OR nick LIKE "serge%"');
+                requete('UPDATE logs SET nick="BobArdKor" WHERE nick LIKE "bob%"');
+                requete('UPDATE logs SET nick="e-vi" WHERE nick LIKE "e-%" OR nick LIKE "ev%" OR nick LIKE "ew%";');
+                requete('UPDATE logs SET nick="Selbst" WHERE nick LIKE "sel%"');
+                requete('UPDATE logs SET nick="cognet" WHERE nick LIKE "cog%"');
+                jlog(':---- MAINTENANCE COMPLETE ---');
+                $maintenance[$today] = 1;
+                
+            }
+
             $count = chope('SELECT count(iid) AS c FROM `logs` WHERE 1');
             $count = $count['c'];
             fputs($socket, "PONG " . $ex[1] . "\n");
             $chance = rand($min_normal, $max_normal);
             $totalchance = rand($min_normal, $max_normal);
-            // echo PHP_EOL . 'New Ping > New Chance : ' . $chance;
             fputs($socket, "JOIN " . $room . "\n");
            
-            /*
-            if (rand(0, $maxrandomrange) < $scumchance) {
-                $randoms = scum();
-                foreach ($randoms as $txt) {
-                    fputs($socket, "PRIVMSG " . $room . " :$txt\n");
-                }
-            }*/
              if (rand(0, $maxrandomrange) < $randchance) {
+                jlog('Random Speak');
                 $randoms = chope('SELECT say FROM ' . $table . ' ORDER BY rand() LIMIT 0,1');
                 $txt = $randoms['say'];
                 fputs($socket, "PRIVMSG " . $room . " :$txt\n");
@@ -206,7 +221,7 @@ while (1) {
 
             $newuser = explode('!', $ex[0]);
             $newuser = str_replace(':', '', $newuser[0]);
-            echo PHP_EOL . 'NEW USER : ' . $newuser;
+            jlog('New user : '.$newuser);
             $users[] = $newuser;
             $users = list_users($users);
             
@@ -220,7 +235,7 @@ while (1) {
 
             $newuser = explode('!', $ex[0]);
             $newuser = str_replace(':', '', $newuser[0]);
-            echo PHP_EOL . 'GONE USER : ' . $newuser;
+            jlog('Gone user : '.$newuser);
             $de = rand(0, $maxrandomrange);
             if ($de > $hellochance) {
                 fputs($socket, "PRIVMSG " . $room . " :ouf\n");
@@ -253,8 +268,8 @@ while (1) {
             $pouet = explode('!', $ex[0]);
             $data = str_replace($ex[0], $pouet[0], $data);
             $dit = explode(':', $data);
-
-            echo PHP_EOL . "--- NEW ---------------------------------" . PHP_EOL . "Chance : $chance\n";
+            $nosave = null;
+           jlog("----------- new ------------- chance : $chance");
             /// REPLY
             $lastscore = 0;
             $nodey = 0;
@@ -301,7 +316,8 @@ while (1) {
             }
             
             $dey = '';
-            echo PHP_EOL . "$qui($privatemode): $dit[2] ($nb_mots mots)";
+            $privatemodedis = $privatemode ? '(pv)' : '';
+            jlog(":$qui $privatemodedis : $dit[2] ($nb_mots mots)");
 
             /* triggers */
 
@@ -317,15 +333,7 @@ while (1) {
                     fputs($socket, "PRIVMSG " . $room . " :$txt\n");
                 }
             }
-/*
-            if (strstr($dit[2], 'scum')) {
-                $randoms = scum();
-                foreach ($randoms as $txt) {
-                    sleep(2);
-                    fputs($socket, "PRIVMSG " . $room . " :$txt\n");
-                }
-            }
-*/
+
             if (strstr($dit[2], '!help')) {
 
                 fputs($socket, "PRIVMSG " . $qui . " : (en pv) #ano [message anonyme] \n");
@@ -402,7 +410,6 @@ while (1) {
                 $reste = explode('de ',$string[1]);
                 $what = trim($reste[1]);
                 $sql = 'SELECT say FROM logs WHERE nick="'.$speaker.'" AND say LIKE "%'.$what.'%" ORDER BY rand() LIMIT 0,1';
-              //  echo PHP_EOL."$string[1] $reste[0] Compte : ".$sql;
                 $rep = chope($sql);
                 if(!$rep){
                     $citation = "Il n'en dirait rien ...";
@@ -444,7 +451,7 @@ while (1) {
 
             if (strstr($dit[2], $botname) || strstr($dit[2], 'Jojal') || $privatemode == 1) {
                 $dey = 1;
-                echo PHP_EOL . "-forced to reply-\n";
+                jlog("forced to reply");
                 $chance = $hot_jojal;
                 if (strstr($dit[2], 'vener')) {
                     $chance = 1;
@@ -475,14 +482,12 @@ while (1) {
                 $neochance = $chance - $lastscore; //// 
                 if ($neochance < 1)
                     $neochance = 1;
-                // echo PHP_EOL.'RANGE(' . $chance . ') - SCORE (' . $lastscore . ') : NEORANGE : ' . $neochance . '';
                 if (!$dey)
                     $dey = rand(1, $neochance);
                 if ($privatemode == 1)
                     $dey = 1; // si priv� reponse auto
                 $original_chance = $chance;
                 $chance = $neochance;
-                // echo "[dey=$dey / $chance]";
             }
 
             /* calculate intelligence bordel ! */
@@ -541,9 +546,9 @@ while (1) {
                     }
                 }
                 if ($best)
-                    echo PHP_EOL . 'Best Match : ' . $lastscore . ': "' . $phrabest . '';
+                    jlog('Best Match : ' . $lastscore . ': "' . $phrabest . '');
                 else
-                    echo PHP_EOL . "No Match\n";
+                    jlog("No Match");
                 
 
 
@@ -562,19 +567,19 @@ while (1) {
                     $what = chope('SELECT iid,say FROM ' . $table . ' WHERE lastiid=' . $best . ' ' . $ig_req . ' LIMIT 0,1;');
                     $answer = $what['say'];
                     if (!$answer && $phrabest != $dit[2]) {
-                        echo PHP_EOL . "No parent, taking original copy";
+                        jlog("No parent, taking original copy");
                         $reponse_b = $phrabest;
                     }
-                    echo PHP_EOL . "Answer : << $answer >>";
+                    jlog(":Answer : << $answer >>");
                     
 
                     if (in_array($best, $alreadysaid))
-                        echo PHP_EOL . '-----abort : already said----';
+                       jlog('-----abort : already said----');
 
                     $replica++;
 
                     if ($replica > 300) {
-                        echo PHP_EOL."{RESETING}";
+                         jlog("--- reset alreadysaid memory ---");
                         $alreadysaid = array();
                         $replica = 0;                       
                     }
@@ -596,12 +601,12 @@ while (1) {
                         }
                         $alreadysaid[] = $best;
                     } else {
-                        echo PHP_EOL."error, nothing to say (?)";
+                      jlog(":error, nothing to say (?)");
                     }
                 }
             } // no dey
             else {
-                echo PHP_EOL . "- Shut - ";
+                jlog(":- Shut - ");
             }
 
             // Insertion de la replique dans la BDD
@@ -620,17 +625,16 @@ while (1) {
             $dit[2] = strtolower($dit[2]);
             $exist = chope('SELECT * FROM ' . $table . ' WHERE say="' . $dit[2] . '" LIMIT 0,1'); // verification pas dej� entree
             
-            if ($dit[2] != $exist['say']) {
+            if ($dit[2] != $exist['say'] && !$shutup) {
+                
                 if (!strstr($dit[2], 'http')){
+                    jlog('Data recorded');
                     requete('INSERT INTO ' . $table . '(nick,say,lastiid,private) VALUES("' . $qui . '","' . $dit[2] . '",' . $lastid . ',' . $privatemode . ');');
                 }
                 $justid = mysql_insert_id();
                 
-                //requete('INSERT INTO logrelation(lid,pid) VALUES('.$justid.','.$lastid.')');
 
                 $lastid = $justid;
-                
-                
 
 
                 // stockage lastidd selon la discussion

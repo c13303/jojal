@@ -82,9 +82,6 @@ function tweet($pipol, $qui) {
     }
     $dom->load($page);
     $tweets = $dom->find('.tweet-text');
-
-
-
     $rand = rand(0, count($tweets) - 1);
     $array = arrayize($tweets[$rand], null, $pipol);
     
@@ -137,4 +134,29 @@ function scum() {
     return($array);
      * 
      */
+}
+
+function isdead($qui){
+    $url = 'http://estcequejeanmarielepenestmort.info/dedornot.class.php?nom=' . $qui;
+     $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+
+    $ua = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/525.13 (KHTML, like Gecko) Chrome/0.A.B.C Safari/525.13';
+    $http_headers = array(
+        'User-Agent: ' . $ua,
+    );
+    curl_setopt($ch, CURLOPT_USERAGENT, $ua);
+    curl_setopt($ch, CURLOPT_COOKIE, "visitor_country=FR;wbCookieNotifier=1;acceptableAds=0");
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);    // $output contains the output string
+    $output = curl_exec($ch);
+
+    // close curl resource to free up system resources
+    curl_close($ch);
+   
+    $dom = new Dom;
+    $dom->load($output);
+    $results = $dom->find('p');
+    $result = strip_tags($results[0]);
+    if(!$result) $result = 'le bob service ne sait pas';
+    return($result);
 }

@@ -4,25 +4,23 @@
 
 require('jojal_twitter.php');
 
-$botnames = array('Jojal', 'Jojal2', 'Jojo',$botname);
+$botnames = array('Jojal', 'Jojal2', 'Jojo', $botname);
 //$methode = 1;$intelligence = 250000;  // ORIGINAL METHOD WORD COUNT by CHARLES désolé ça reste la meilleure :'(
 //$methode = 2; $intelligence = 100000;  // METHODE SIMILAR_TEXT
-$methode = 3;$intelligence = 350000;  // METHODE INDICE JACQUARD + SELE
+$methode = 3;
+$intelligence = 350000;  // METHODE INDICE JACQUARD + SELE
 $maintenance = array();
 
 /* fonction indice methode 3 */
 
-
-
-
-function getSimilarityCoefficient($mots, $string2,$bofmots =null) {
+function getSimilarityCoefficient($mots, $string2, $bofmots = null) {
     $minWordSize = 3;
     $item1 = $mots;
     $item2 = array();
     $delim = ' \n\t,.!?:;';
     $tok = strtok($string2, $delim);
     while ($tok !== false) {
-        if (strlen($tok) > $minWordSize && !in_array($tok,$bofmots)){
+        if (strlen($tok) > $minWordSize && !in_array($tok, $bofmots)) {
             $item2[] = $tok;
         }
         $tok = strtok($delim);
@@ -33,8 +31,7 @@ function getSimilarityCoefficient($mots, $string2,$bofmots =null) {
     return $coefficient;
 }
 
-
-function cleanageToSpeak($say, $qui, $botnames,$pipol,$users) {
+function cleanageToSpeak($say, $qui, $botnames, $pipol, $users) {
     foreach ($botnames as $botna) {
         $say = str_replace($botna, $qui, $say);
         $say = str_replace(strtolower($botna), $qui, $say);
@@ -62,9 +59,9 @@ date_default_timezone_set('Europe/Brussels');
 
 $chance = 0;
 /*
-$scumming = array();
-$scumbuffer = array();
-$scumtopic = array();
+  $scumming = array();
+  $scumbuffer = array();
+  $scumtopic = array();
  * 
  */
 $caca = array();
@@ -133,7 +130,7 @@ while (1) {
     $c = 0;
     // Continue the rest of the script here
     while (1) {
-        
+
         $h = date('H');
         $m = date('i');
         $shutup = 0;
@@ -155,11 +152,11 @@ while (1) {
             continue;
         }
         $c++;
-       
-        if(!strstr('PING :',$data)){
-            jlog('Data : '.$data);            
+
+        if (!strstr('PING :', $data)) {
+            jlog('Data : ' . $data);
         }
-        
+
         // Separate all data
         $ex = explode(' ', $data);
 
@@ -170,15 +167,15 @@ while (1) {
             jlog('LiStIng UsErS+-');
             $users = list_users($users);
         }
-        
-        
+
+
 
 
         // Send PONG back to the server
         if ($ex[0] == "PING") {
-            
+
             /* maintenance */
-            
+
             $today = date('Y-m-d');
             $now = date('Y-m-d h:i');
             if (!isset($maintenance[$today])) {
@@ -192,7 +189,6 @@ while (1) {
                 requete('UPDATE logs SET nick="cognet" WHERE nick LIKE "cog%"');
                 jlog(':---- MAINTENANCE COMPLETE ---');
                 $maintenance[$today] = 1;
-                
             }
 
             $count = chope('SELECT count(iid) AS c FROM `logs` WHERE 1');
@@ -201,31 +197,30 @@ while (1) {
             $chance = rand($min_normal, $max_normal);
             $totalchance = rand($min_normal, $max_normal);
             fputs($socket, "JOIN " . $room . "\n");
-           
-             if (rand(0, $maxrandomrange) < $randchance) {
+
+            if (rand(0, $maxrandomrange) < $randchance) {
                 jlog('Random Speak');
                 $randoms = chope('SELECT say FROM ' . $table . ' ORDER BY rand() LIMIT 0,1');
                 $txt = $randoms['say'];
                 fputs($socket, "PRIVMSG " . $room . " :$txt\n");
-                
             }
-            if (rand(0, $maxrandomrange) < $tweetchance ) {
-                $randoms = tweet($users,$qui);
+            if (rand(0, $maxrandomrange) < $tweetchance) {
+                $randoms = tweet($users, $qui);
                 foreach ($randoms as $txt) {
                     fputs($socket, "PRIVMSG " . $room . " :$txt\n");
                 }
             }
         }
-        
-        if ($ex[1] == 'JOIN') {           
+
+        if ($ex[1] == 'JOIN') {
 
             $newuser = explode('!', $ex[0]);
             $newuser = str_replace(':', '', $newuser[0]);
-            jlog('New user : '.$newuser);
+            jlog('New user : ' . $newuser);
             $users[] = $newuser;
             $users = list_users($users);
-            
-             $de = rand(0, $maxrandomrange);
+
+            $de = rand(0, $maxrandomrange);
             if ($de > $hellochance && !in_array($newuser, $botnames)) {
                 fputs($socket, "PRIVMSG " . $room . " :salut $newuser\n");
             }
@@ -235,7 +230,7 @@ while (1) {
 
             $newuser = explode('!', $ex[0]);
             $newuser = str_replace(':', '', $newuser[0]);
-            jlog('Gone user : '.$newuser);
+            jlog('Gone user : ' . $newuser);
             $de = rand(0, $maxrandomrange);
             if ($de > $hellochance) {
                 fputs($socket, "PRIVMSG " . $room . " :ouf\n");
@@ -243,7 +238,7 @@ while (1) {
             if (($key = array_search($newuser, $users)) !== false) {
                 unset($users[$key]);
             }
-            $users = list_users($users);          
+            $users = list_users($users);
 
             // add user to list
         }
@@ -269,7 +264,7 @@ while (1) {
             $data = str_replace($ex[0], $pouet[0], $data);
             $dit = explode(':', $data);
             $nosave = null;
-           jlog("----------- new ------------- chance : $chance");
+            jlog("----------- new ------------- chance : $chance");
             /// REPLY
             $lastscore = 0;
             $nodey = 0;
@@ -305,7 +300,7 @@ while (1) {
             $nb_mots = count($mots);
             $qui = explode('!', $ex[0]);
             $qui = $qui[0];
-            
+
             /// public or private
             if ($ex[2] == $botname) {
                 $privatemode = 1;
@@ -314,21 +309,70 @@ while (1) {
                 $privatemode = 0;
                 $response = $room;
             }
-            
+
             $dey = '';
             $privatemodedis = $privatemode ? '(pv)' : '';
             jlog(":$qui $privatemodedis : $dit[2] ($nb_mots mots)");
 
             /* triggers */
+            
+            if (stristr($dit[2], 'inconsistence du jour')){
+                
+                $inconswords = array('caca','zob','pénis','penis','chatte','zboub','merde','chier','crotte','pute');
+                $iquery ='';
+                foreach($inconswords as $word){
+                    $iquery.=' OR say LIKE "%'.$word.'%" ';
+                }
+                
+                $query = "SELECT count(iid) AS i  FROM `logs` WHERE `date` > '".date('Y-m-d 00:00:00')."' AND "
+                        . ' (say LIKE "%teub%" '.$iquery.')';
+                $rez = chope($query);
+                 
+                
+                
+                fputs($socket, "PRIVMSG " . $response . " : votre inconsistance du jour est de " . $rez['i'] . "% ...  \n");
+            }
+            
 
-            if (stristr($dit[2], 'taux de ')) {
-                $pourcentage = rand(0, 100);
-                fputs($socket, "PRIVMSG " . $response . " :" . $pourcentage . "% \n");
+            if (stristr($dit[2], 'taux de ') || stristr($dit[2], "taux d'")) {
+                //$pourcentage = rand(0, 100);
+                
+                $str = str_replace('taux de ','',$dit[2]);
+                $str = str_replace("taux d'",'',$str);
+                
+                $strlen = strlen($str);
+                $totalvalue = $score = 0;
+                $on = 0;
+                $date = intval(date('Y-m-d'));
+                for ($i = 0; $i <= $strlen; $i++) {
+                    $on = $on ? 0 : 1;
+                    $char = substr($str, $i, 1);
+                    if ($on)
+                        $ord = 26 - (ord(strtoupper($char)) - ord('A') + 1);
+                    else
+                        $ord = (ord(strtoupper($char)) - ord('A') + 1);
+                    $ord = intval($ord);
+                    if ($ord % 2) {
+                        $charscore = 26;
+                    } else {
+                        $charscore = 0;
+                    }
+                    if (!$date % 2)
+                        $charscore = 26 - $charscore;
+                    if ($ord > -1 && $ord <= 26) {
+                        $totalvalue += 26;
+                        $score += $charscore;
+                        //  echo PHP_EOL.$char.' is '.$ord;
+                    }
+                }
+                $rand = intval($score * 100 / $totalvalue);
+
+                fputs($socket, "PRIVMSG " . $response . " :" . $rand . "% \n");
             }
 
             $jour = date('Y-m-d');
             if (strstr($dit[2], 'tweet')) {
-                $randoms = tweet($users,$qui);
+                $randoms = tweet($users, $qui);
                 foreach ($randoms as $txt) {
                     fputs($socket, "PRIVMSG " . $room . " :$txt\n");
                 }
@@ -372,56 +416,69 @@ while (1) {
                 $shutup = 1;
                 echo "\n$h $m\n";
             }
-            
+
             if (strstr($dit[2], 'qui a deja dit ') || strstr($dit[2], 'qui a déjà dit ')) {
                 $shutup = 1;
                 $string = $dit[2];
-                $string = str_replace('?','',$string);
-                $string = str_replace('"','',$string);
-                $string = str_replace('é','e',$string);
-                $string = str_replace('à','a',$string);
-                $string = explode('qui a deja dit ',$string);
+                $string = str_replace('?', '', $string);
+                $string = str_replace('"', '', $string);
+                $string = str_replace('é', 'e', $string);
+                $string = str_replace('à', 'a', $string);
+                $string = explode('qui a deja dit ', $string);
                 $string = $string[1];
-               
+
                 $str = trim($string);
-                
-                $q = 'SELECT nick,count(iid) AS con FROM logs WHERE say LIKE "%'.$str.'%" GROUP BY nick ORDER BY con DESC LIMIT 0,3';
-               
+
+                $q = 'SELECT nick,count(iid) AS con FROM logs WHERE say LIKE "%' . $str . '%" GROUP BY nick ORDER BY con DESC LIMIT 0,3';
+
                 $existe = requete($q);
                 $rep = '';
                 while ($e = mysql_fetch_assoc($existe)) {
                     $rep .= $rep ? ', ' : '';
-                    $rep .=$e['nick'].' x '.$e['con'];
+                    $rep .= $e['nick'] . ' x ' . $e['con'];
                 }
-                if(!$rep){
-                    $rep = "Personne n'a jamais dit ça ...";           
+                if (!$rep) {
+                    $rep = "Personne n'a jamais dit ça ...";
                 }
                 fputs($socket, "PRIVMSG " . $response . " : " . $qui . ": " . $rep . " \n");
             }
-            
-             if (strstr($dit[2], 'que dirait ')) {
-                 $shutup = 1;
+
+            if (strstr($dit[2], 'que dirait ')) {
+                $shutup = 1;
                 $string = $dit[2];
-                $string = str_replace('?','',$string);
-                $string = str_replace('"','',$string);
-                $string = explode('que dirait ',$string);
-                $string = explode(' ',$string[1],2);
+                $string = str_replace('?', '', $string);
+                $string = str_replace('"', '', $string);
+                $string = explode('que dirait ', $string);
+                $string = explode(' ', $string[1], 2);
                 $speaker = trim($string[0]);
-                $reste = explode('de ',$string[1]);
+                $reste = explode('de ', $string[1]);
                 $what = trim($reste[1]);
-                $sql = 'SELECT say FROM logs WHERE nick="'.$speaker.'" AND say LIKE "%'.$what.'%" ORDER BY rand() LIMIT 0,1';
+                $sql = 'SELECT say FROM logs WHERE nick="' . $speaker . '" AND say LIKE "%' . $what . '%" ORDER BY rand() LIMIT 0,1';
                 $rep = chope($sql);
-                if(!$rep){
+                if (!$rep) {
                     $citation = "Il n'en dirait rien ...";
                 } else {
-                    $citation = "\"".trim($rep['say'])."\" ($speaker)"; 
+                    $citation = "\"" . trim($rep['say']) . "\" ($speaker)";
                 }
-                 fputs($socket, "PRIVMSG " . $response . " : " . $qui . ": " . $citation . " \n");
-               
-             }
-            
-            
-            
+                fputs($socket, "PRIVMSG " . $response . " : " . $qui . ": " . $citation . " \n");
+            }
+
+            if (strstr($dit[2], ' est mort ?') || strstr($dit[2], ' est mort?') || strstr($dit[2], ' est morte ?') || strstr($dit[2], ' est morte?')) {
+                $shutup = 1;
+                $string = $dit[2];
+                $string = explode(' est mort', $string);
+                $name = $string[0];
+                $name = str_replace($botname, '', $name);
+                $name = str_replace(':', '', $name);
+                $name = trim($name);
+                $rez = isdead(urlencode(ucwords($name)));
+
+
+
+                fputs($socket, "PRIVMSG " . $response . " : " . $qui . ": " . $rez . " \n");
+            }
+
+
 
             /* POTE QUI FEATURE */
 
@@ -438,7 +495,7 @@ while (1) {
                     }
                 }
 
-                fputs($socket, "PRIVMSG " . $response . " : " . $qui . ": moi " . $potequi['say'] . " \n");
+                fputs($socket, "PRIVMSG " . $response . " :" . $qui . ": moi " . $potequi['say'] . " \n");
             }
 
             if (strstr($dit[2], 'rigolo ' . $botname)) {
@@ -549,17 +606,17 @@ while (1) {
                     jlog('Best Match : ' . $lastscore . ': "' . $phrabest . '');
                 else
                     jlog("No Match");
-                
+
 
 
                 if (!isset($alreadysaid))
                     $alreadysaid = array();
                 if ($best && !in_array($best, $alreadysaid)) {
-                    
+
                     $ignore = array('McCaca');
                     $ig_req = '';
                     $reponse_b = '';
-                    
+
                     foreach ($ignore as $ignoble) {
                         $ig_req .= ' AND nick!="' . $ignoble . '" ';
                     }
@@ -571,17 +628,17 @@ while (1) {
                         $reponse_b = $phrabest;
                     }
                     jlog(":Answer : << $answer >>");
-                    
+
 
                     if (in_array($best, $alreadysaid))
-                       jlog('-----abort : already said----');
+                        jlog('-----abort : already said----');
 
                     $replica++;
 
                     if ($replica > 300) {
-                         jlog("--- reset alreadysaid memory ---");
+                        jlog("--- reset alreadysaid memory ---");
                         $alreadysaid = array();
-                        $replica = 0;                       
+                        $replica = 0;
                     }
 
 
@@ -591,8 +648,8 @@ while (1) {
                             if ($reponse_b) {
                                 $what['say'] = $reponse_b;
                             }
-                            
-                           $what['say']=cleanageToSpeak($what['say'],$qui,$botnames,$pipol,$users);
+
+                            $what['say'] = cleanageToSpeak($what['say'], $qui, $botnames, $pipol, $users);
 
                             if (!strstr($what['say'], 'http')) {
                                 fputs($socket, "PRIVMSG " . $response . " :" . $what['say'] . "\n");
@@ -601,7 +658,7 @@ while (1) {
                         }
                         $alreadysaid[] = $best;
                     } else {
-                      jlog(":error, nothing to say (?)");
+                        jlog(":error, nothing to say (?)");
                     }
                 }
             } // no dey
@@ -624,15 +681,15 @@ while (1) {
 
             $dit[2] = strtolower($dit[2]);
             $exist = chope('SELECT * FROM ' . $table . ' WHERE say="' . $dit[2] . '" LIMIT 0,1'); // verification pas dej� entree
-            
+
             if ($dit[2] != $exist['say'] && !$shutup) {
-                
-                if (!strstr($dit[2], 'http')){
+
+                if (!strstr($dit[2], 'http')) {
                     jlog('Data recorded');
                     requete('INSERT INTO ' . $table . '(nick,say,lastiid,private) VALUES("' . $qui . '","' . $dit[2] . '",' . $lastid . ',' . $privatemode . ');');
                 }
                 $justid = mysql_insert_id();
-                
+
 
                 $lastid = $justid;
 

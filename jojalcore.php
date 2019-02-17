@@ -1,6 +1,13 @@
 <?php
 
 /* file created by charles.torris@gmail.com */
+session_start();
+$inconswords = array(
+    'caca', 'zob', 'pénis', 'penis', 'chatte', 'zboub', 'burne','mmm',
+    'merde', 'chier', 'crotte', 'pute', 'teub', 'bite', 'anus', 'salut', 'baise', 'fuck', 'mère');
+$daily_incons = array();
+
+
 
 require('jojal_twitter.php');
 
@@ -49,6 +56,24 @@ function cleanageToSpeak($say, $qui, $botnames, $pipol, $users) {
         $say = $qui . ' : ' . $say;
     $say = preg_replace('/\s{2,}/', ' ', $say);
     return($say);
+}
+
+function get_inconsistance() {
+    global $daily_incons, $inconswords;
+    return $daily_incons[date('Ymd')];
+    /*
+      $iquery = '';
+      foreach ($inconswords as $word) {
+      $iquery .= ' OR say LIKE "%' . $word . '%" ';
+      }
+
+      $query = "SELECT count(iid) AS i  FROM `logs` WHERE `date` > '" . date('Y-m-d 00:00:00') . "' AND "
+      . ' (say LIKE "re" ' . $iquery . ')';
+      $rez = chope($query);
+
+      return(intval($rez['i'] + $daily_incons[date('Ymd')]));
+     * 
+     */
 }
 
 ini_set(default_charset, "ISO-8859-1");
@@ -127,6 +152,11 @@ while (1) {
 
     // END SELECT GENS
 
+
+
+
+
+
     $c = 0;
     // Continue the rest of the script here
     while (1) {
@@ -136,6 +166,12 @@ while (1) {
         $shutup = 0;
         $data = fgets($socket, 4096);
 
+        /* undatabased inconsitancy */
+        $k = date('Ymd');
+        if (!isset($daily_incons[$k])) {
+            $daily_incons[$k] = 0;
+        }
+
 
         if (!empty($delayshit[$h][$m])) {
             jlog("Chrono Triggered $h $m");
@@ -143,6 +179,14 @@ while (1) {
             $delayshit[$h][$m] = null;
             fputs($socket, "PRIVMSG " . $room . " :$renvoi\n");
         }
+
+
+        if ($h == 23 && $m >= 30 && !isset($inconsistancedujour[date('Y-m-d')])) {
+            $inconsistancedujour[date('Y-m-d')] = get_inconsistance();
+            fputs($socket, "PRIVMSG " . $room . " : la journée se termine, l'inconsistance a été de " . $inconsistancedujour[date('Y-m-d')] . "% aujourd'hui\n");
+        }
+
+
 
         if (!$data) {
             $info = stream_get_meta_data($socket);
@@ -171,6 +215,7 @@ while (1) {
 
 
 
+
         // Send PONG back to the server
         if ($ex[0] == "PING") {
 
@@ -182,7 +227,7 @@ while (1) {
 
                 jlog('---- MAINTENANCE ---');
 
-                requete('UPDATE logs SET nick="puduc" WHERE nick LIKE "charm%" OR nick LIKE "puduc%" OR nick LIKE "serge%"');
+                requete('UPDATE logs SET nick="puduc" WHERE nick LIKE "charm%" OR nick LIKE "puduc%" OR nick LIKE "serge%"  OR nick LIKE "gabriel_p%"');
                 requete('UPDATE logs SET nick="BobArdKor" WHERE nick LIKE "bob%"');
                 requete('UPDATE logs SET nick="e-vi" WHERE nick LIKE "e-%" OR nick LIKE "ev%" OR nick LIKE "ew%";');
                 requete('UPDATE logs SET nick="Selbst" WHERE nick LIKE "sel%"');
@@ -190,6 +235,9 @@ while (1) {
                 jlog(':---- MAINTENANCE COMPLETE ---');
                 $maintenance[$today] = 1;
             }
+
+
+
 
             $count = chope('SELECT count(iid) AS c FROM `logs` WHERE 1');
             $count = $count['c'];
@@ -315,57 +363,58 @@ while (1) {
             jlog(":$qui $privatemodedis : $dit[2] ($nb_mots mots)");
 
             /* triggers */
-            
-            if (stristr($dit[2], 'inconsistence du jour')){
-                
-                $inconswords = array('caca','zob','pénis','penis','chatte','zboub','merde','chier','crotte','pute');
-                $iquery ='';
-                foreach($inconswords as $word){
-                    $iquery.=' OR say LIKE "%'.$word.'%" ';
+            foreach ($inconswords as $incon) {
+                if (stristr($dit[2], $incon)) {
+                    $daily_incons[date('Ymd')] ++;
                 }
-                
-                $query = "SELECT count(iid) AS i  FROM `logs` WHERE `date` > '".date('Y-m-d 00:00:00')."' AND "
-                        . ' (say LIKE "%teub%" '.$iquery.')';
-                $rez = chope($query);
-                 
-                
-                
-                fputs($socket, "PRIVMSG " . $response . " : votre inconsistance du jour est de " . $rez['i'] . "% ...  \n");
             }
-            
+            if (substr(trim($dit[2]), 0, 2) === "re")
+                $daily_incons[date('Ymd')] ++;
+
+            if (stristr($dit[2], 'inconsistance du jour')) {
+                $incon = get_inconsistance();
+                fputs($socket, "PRIVMSG " . $response . " :votre inconsistance du jour est de " . $incon . "% ...  \n");
+            }
+
 
             if (stristr($dit[2], 'taux de ') || stristr($dit[2], "taux d'")) {
                 //$pourcentage = rand(0, 100);
-                
-                $str = str_replace('taux de ','',$dit[2]);
-                $str = str_replace("taux d'",'',$str);
-                
-                $strlen = strlen($str);
-                $totalvalue = $score = 0;
-                $on = 0;
-                $date = intval(date('Y-m-d'));
-                for ($i = 0; $i <= $strlen; $i++) {
-                    $on = $on ? 0 : 1;
-                    $char = substr($str, $i, 1);
-                    if ($on)
-                        $ord = 26 - (ord(strtoupper($char)) - ord('A') + 1);
-                    else
-                        $ord = (ord(strtoupper($char)) - ord('A') + 1);
-                    $ord = intval($ord);
-                    if ($ord % 2) {
-                        $charscore = 26;
-                    } else {
-                        $charscore = 0;
-                    }
-                    if (!$date % 2)
-                        $charscore = 26 - $charscore;
-                    if ($ord > -1 && $ord <= 26) {
-                        $totalvalue += 26;
-                        $score += $charscore;
-                        //  echo PHP_EOL.$char.' is '.$ord;
-                    }
-                }
-                $rand = intval($score * 100 / $totalvalue);
+
+                $str = str_replace('taux de ', '', $dit[2]);
+                $str = str_replace("taux d'", '', $str);
+
+                $str = date('Y-m-d') . $str;
+                $bite = hash('sha256', $str, true);
+                $bite = unpack('I', $bite);
+                $rand = $bite[1] % 101;
+                /*
+                  $strlen = strlen($str);
+                  $totalvalue = $score = 0;
+                  $on = 0;
+                  $date = intval(date('Y-m-d'));
+                  for ($i = 0; $i <= $strlen; $i++) {
+                  $on = $on ? 0 : 1;
+                  $char = substr($str, $i, 1);
+                  if ($on)
+                  $ord = 26 - (ord(strtoupper($char)) - ord('A') + 1);
+                  else
+                  $ord = (ord(strtoupper($char)) - ord('A') + 1);
+                  $ord = intval($ord);
+                  if ($ord % 2) {
+                  $charscore = 26;
+                  } else {
+                  $charscore = 0;
+                  }
+                  if (!$date % 2)
+                  $charscore = 26 - $charscore;
+                  if ($ord > -1 && $ord <= 26) {
+                  $totalvalue += 26;
+                  $score += $charscore;
+                  //  echo PHP_EOL.$char.' is '.$ord;
+                  }
+                  }
+                  $rand = intval($score * 100 / $totalvalue);
+                 */
 
                 fputs($socket, "PRIVMSG " . $response . " :" . $rand . "% \n");
             }

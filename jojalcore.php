@@ -3,11 +3,12 @@
 /* file created by charles.torris@gmail.com */
 session_start();
 $inconswords = array(
-    'caca', 'zob', 'pénis', 'penis', 'chatte', 'zboub', 'burne','mmm',
+    'caca', 'zob', 'pénis', 'penis', 'chatte', 'zboub', 'burne', 'mmm', 'nique', 'crotte', 'juif', 'encul', 'putain',
+    'vdm', 'anal',
     'merde', 'chier', 'crotte', 'pute', 'teub', 'bite', 'anus', 'salut', 'baise', 'fuck', 'mère');
 $daily_incons = array();
-
-
+$most_incons = array();
+$daily_rate = 0;
 
 require('jojal_twitter.php');
 
@@ -58,9 +59,31 @@ function cleanageToSpeak($say, $qui, $botnames, $pipol, $users) {
     return($say);
 }
 
+function incons_me($qui) {
+    global $most_incons, $daily_incons;
+    if (!isset($most_incons[$qui])) {
+        $most_incons[$qui] = 0;
+    }
+    $most_incons[$qui] ++;
+    $daily_incons[date('Ymd')] ++;
+}
+
+function get_most_inconsistant() {
+    global $most_incons;
+    $bestscore = $best = 0;
+    foreach ($most_incons as $most => $score) {
+        if ($score > $bestscore) {
+            $bestscore = $score;
+            $best = $most;
+        }
+    }
+    return(array($best, $bestscore));
+}
+
 function get_inconsistance() {
-    global $daily_incons, $inconswords;
-    return $daily_incons[date('Ymd')];
+    global $daily_incons, $inconswords, $daily_rate;
+
+    return (intval($daily_incons[date('Ymd')] / $daily_rate * 100));
     /*
       $iquery = '';
       foreach ($inconswords as $word) {
@@ -120,7 +143,6 @@ connect();
 $count = chope('SELECT count(iid) AS c FROM `logs` WHERE 1');
 $count = $count['c'];
 
-$replica = 0;
 $response = $room;
 // Force an endless while
 while (1) {
@@ -163,11 +185,12 @@ while (1) {
 
         $h = date('H');
         $m = date('i');
+        $k = date('Ymd');
+
         $shutup = 0;
         $data = fgets($socket, 4096);
 
         /* undatabased inconsitancy */
-        $k = date('Ymd');
         if (!isset($daily_incons[$k])) {
             $daily_incons[$k] = 0;
         }
@@ -181,9 +204,14 @@ while (1) {
         }
 
 
-        if ($h == 23 && $m >= 30 && !isset($inconsistancedujour[date('Y-m-d')])) {
-            $inconsistancedujour[date('Y-m-d')] = get_inconsistance();
-            fputs($socket, "PRIVMSG " . $room . " : la journée se termine, l'inconsistance a été de " . $inconsistancedujour[date('Y-m-d')] . "% aujourd'hui\n");
+
+        if ($h == 23 && $m >= 55 && !isset($inconsistancedujour[$k])) {
+            jlog('Inconsistance du jour ' . $h . ' ' . $m . ' ' . $k);
+            $inconsistancedujour[$k] = get_inconsistance();
+            fputs($socket, "PRIVMSG " . $room . " : la journée se termine, l'inconsistance a été de " . $inconsistancedujour[$k] . "% aujourd'hui\n");
+            $mostA = get_most_inconsistant();
+            fputs($socket, "PRIVMSG " . $response . " :le plus inconsistant est " . $mostA[0] . "  \n");
+            $daily_rate = 0;
         }
 
 
@@ -246,14 +274,25 @@ while (1) {
             $totalchance = rand($min_normal, $max_normal);
             fputs($socket, "JOIN " . $room . "\n");
 
+            /* say random shit */
             if (rand(0, $maxrandomrange) < $randchance) {
                 jlog('Random Speak');
                 $randoms = chope('SELECT say FROM ' . $table . ' ORDER BY rand() LIMIT 0,1');
                 $txt = $randoms['say'];
                 fputs($socket, "PRIVMSG " . $room . " :$txt\n");
             }
+
+            /* say random tweeter */
             if (rand(0, $maxrandomrange) < $tweetchance) {
                 $randoms = tweet($users, $qui);
+                foreach ($randoms as $txt) {
+                    fputs($socket, "PRIVMSG " . $room . " :$txt\n");
+                }
+            }
+
+            /* say random booba */
+            if (rand(0, $maxrandomrange) < $geniuschance) {
+                $randoms = tweet(null, null, 'booba');
                 foreach ($randoms as $txt) {
                     fputs($socket, "PRIVMSG " . $room . " :$txt\n");
                 }
@@ -312,6 +351,7 @@ while (1) {
             $data = str_replace($ex[0], $pouet[0], $data);
             $dit = explode(':', $data);
             $nosave = null;
+            $daily_rate++;
             jlog("----------- new ------------- chance : $chance");
             /// REPLY
             $lastscore = 0;
@@ -362,14 +402,16 @@ while (1) {
             $privatemodedis = $privatemode ? '(pv)' : '';
             jlog(":$qui $privatemodedis : $dit[2] ($nb_mots mots)");
 
+
             /* triggers */
             foreach ($inconswords as $incon) {
                 if (stristr($dit[2], $incon)) {
-                    $daily_incons[date('Ymd')] ++;
+                    incons_me($qui);
                 }
             }
-            if (substr(trim($dit[2]), 0, 2) === "re")
-                $daily_incons[date('Ymd')] ++;
+            if (substr(trim($dit[2]), 0, 2) === "re") {
+                incons_me($qui);
+            }
 
             if (stristr($dit[2], 'inconsistance du jour')) {
                 $incon = get_inconsistance();
@@ -387,34 +429,7 @@ while (1) {
                 $bite = hash('sha256', $str, true);
                 $bite = unpack('I', $bite);
                 $rand = $bite[1] % 101;
-                /*
-                  $strlen = strlen($str);
-                  $totalvalue = $score = 0;
-                  $on = 0;
-                  $date = intval(date('Y-m-d'));
-                  for ($i = 0; $i <= $strlen; $i++) {
-                  $on = $on ? 0 : 1;
-                  $char = substr($str, $i, 1);
-                  if ($on)
-                  $ord = 26 - (ord(strtoupper($char)) - ord('A') + 1);
-                  else
-                  $ord = (ord(strtoupper($char)) - ord('A') + 1);
-                  $ord = intval($ord);
-                  if ($ord % 2) {
-                  $charscore = 26;
-                  } else {
-                  $charscore = 0;
-                  }
-                  if (!$date % 2)
-                  $charscore = 26 - $charscore;
-                  if ($ord > -1 && $ord <= 26) {
-                  $totalvalue += 26;
-                  $score += $charscore;
-                  //  echo PHP_EOL.$char.' is '.$ord;
-                  }
-                  }
-                  $rand = intval($score * 100 / $totalvalue);
-                 */
+
 
                 fputs($socket, "PRIVMSG " . $response . " :" . $rand . "% \n");
             }
@@ -422,6 +437,13 @@ while (1) {
             $jour = date('Y-m-d');
             if (strstr($dit[2], 'tweet')) {
                 $randoms = tweet($users, $qui);
+                foreach ($randoms as $txt) {
+                    fputs($socket, "PRIVMSG " . $room . " :$txt\n");
+                }
+            }
+
+            if (strstr($dit[2], 'booba')) {
+                $randoms = tweet(null, null, 'booba');
                 foreach ($randoms as $txt) {
                     fputs($socket, "PRIVMSG " . $room . " :$txt\n");
                 }
@@ -553,6 +575,11 @@ while (1) {
                 fputs($socket, "PRIVMSG " . $qui . " :tu refais �a t\'es mort \n");
             }
 
+            if (strstr($dit[2], "qu'est ce qu")) {
+                $quellebase = chope('SELECT say FROM ' . $table . ' WHERE say LIKE "c\'est%" ORDER BY rand() LIMIT 0,1');
+                fputs($socket, "PRIVMSG " . $room . " : " . $qui . ": $quellebase \n");
+            }
+
             /* I.A. REPLY aka the Real Jojal */
 
             if (strstr($dit[2], $botname) || strstr($dit[2], 'Jojal') || $privatemode == 1) {
@@ -682,12 +709,12 @@ while (1) {
                     if (in_array($best, $alreadysaid))
                         jlog('-----abort : already said----');
 
-                    $replica++;
+                  
 
-                    if ($replica > 300) {
+                    if (count($alreadysaid) > 300) {
                         jlog("--- reset alreadysaid memory ---");
                         $alreadysaid = array();
-                        $replica = 0;
+                        
                     }
 
 

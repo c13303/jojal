@@ -1,8 +1,8 @@
 <?php
 
 $devmode = true;
-$botname = 'Jajol';
-$room = '#jojaltest';
+$botname = 'Jajole';
+$room = '#jojalarena';
 $table = 'logs';
 
 $scumchance = 5;

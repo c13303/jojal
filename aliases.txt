@@ -1,0 +1,12 @@
+
+SELECT DISTINCT nick FROM `logs` WHERE nick LIKE "ch%"
+SELECT DISTINCT nick FROM `logs` WHERE nick LIKE "e-%" OR nick LIKE "ev%" OR nick LIKE "ew%"
+SELECT DISTINCT nick FROM `logs` WHERE nick LIKE "bo%"
+SELECT DISTINCT nick FROM `logs` WHERE nick LIKE "sel%"
+SELECT DISTINCT nick FROM `logs` WHERE nick LIKE "cog%"
+
+UPDATE logs SET nick="puduc" WHERE nick LIKE "charm%" OR nick LIKE "puduc%" OR nick LIKE "serge%";
+UPDATE logs SET nick="BobArdKor" WHERE nick LIKE "bob%";
+UPDATE logs SET nick="e-vi" WHERE nick LIKE "e-%" OR nick LIKE "ev%" OR nick LIKE "ew%";
+UPDATE logs SET nick="Selbst" WHERE nick LIKE "sel%";
+UPDATE logs SET nick="cognet" WHERE nick LIKE "cog%";
